@@ -1,5 +1,5 @@
 import { asynchandler } from "../utils/asynchandler.js";
-import ApiError from "../utils/ApiError.js";
+import { ApiError } from "../utils/apiError.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../models/cloudinary.js";
 import { ApiResponse } from "../utils/apiResponse.js";
@@ -33,7 +33,7 @@ const registerUser = asynchandler(async (req, res) => {
         throw new ApiError(400,"All fields are required");
     }
 
-    const existedUser = User.findOne({
+    const existedUser = await User.findOne({
         $or: [{email} , {username}]
     })
     if(existedUser){
@@ -85,7 +85,7 @@ const registerUser = asynchandler(async (req, res) => {
     if(!createdUser){
         throw new ApiError(500,"User creation failed");
     }
-    
+
     return res.status(201).json(
         new ApiResponse(201, createdUser, "User registered successfully")
     )
