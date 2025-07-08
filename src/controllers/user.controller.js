@@ -4,6 +4,7 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../models/cloudinary.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 
 const generateAccessAndRefreshToken = async(userId) => {
@@ -165,8 +166,8 @@ const logoutUser = asynchandler(async (req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set:{
-                refreshToken: undefined
+            $unset:{
+                refreshToken: 1
             }
         },
         {
@@ -227,57 +228,58 @@ const getUserProfile = asynchandler(async (req, res) => {
     if(!username?.trim()){
         throw new ApiError(400, "Username is required");
     }
-    const channel = User.aggregate([
+    const channel = await User.aggregate([
         {
             $match: {
                 username: username.toLowerCase()
             }
-        },
-        {
-            $lookup: {
-                from: "subscriptions",
-                localField: "_id",
-                foreignField: "channel",
-                as: "subscribers"
-            }
-        },
-        {
-            $lookup: {
-                from: "subscriptions",
-                localField: "_id",
-                foreignField: "subscriber",
-                as: "subscribedTo"
-            }
-        },
-        {
-            $addFields: {
-                subscribersCount: {$size: "$subscribers"},
-                subscribedToCount: {$size: "$subscribedTo"},
-                isSubscribed: {
-                    $cond: {
-                        if: {$in: [req.user?._id, "$subscribers.subscriber"]},
-                        then: true,
-                        else: false
-                    }
-                }
-            }
-        },
-        {
-            $project: {
-                fullname: 1,
-                username: 1,
-                email: 1,
-                avatar: 1,
-                coverImage: 1,
-                subscribersCount: 1,
-                subscribedToCount: 1,
-                isSubscribed: 1
-            }
         }
+        // {
+        //     $lookup: {
+        //         from: "subscriptions",
+        //         localField: "_id",
+        //         foreignField: "channel",
+        //         as: "subscribers"
+        //     }
+        // },
+        // {
+        //     $lookup: {
+        //         from: "subscriptions",
+        //         localField: "_id",
+        //         foreignField: "subscriber",
+        //         as: "subscribedTo"
+        //     }
+        // },
+        // {
+        //     $addFields: {
+        //         subscribersCount: {$size: "$subscribers"},
+        //         subscribedToCount: {$size: "$subscribedTo"},
+        //         isSubscribed: {
+        //             $cond: {
+        //                 if: {$in: [req.user?._id, "$subscribers.subscriber"]},
+        //                 then: true,
+        //                 else: false
+        //             }
+        //         }
+        //     }
+        // },
+        // {
+        //     $project: {
+        //         fullname: 1,
+        //         username: 1,
+        //         email: 1,
+        //         avatar: 1,
+        //         coverImage: 1,
+        //         subscribersCount: 1,
+        //         subscribedToCount: 1,
+        //         isSubscribed: 1
+        //     }
+        // }
     ])
-    if(!channel?.length){
+    if(!channel || channel.length === 0){
         throw new ApiError(404, "Channel not found");
     }
+    console.log("Channel data:", channel[0]);
     return res.status(200).json(
         new ApiResponse(200, channel[0], "User profile fetched successfully")
     );
